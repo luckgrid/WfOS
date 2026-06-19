@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# dust doctor — detect Dust tools, print a readiness report, write codex registry.
+# dust doctor — detect Dust tools, print a readiness report, write archon registry.
 # Read-only and agent-safe.
 set -uo pipefail
 
@@ -55,8 +55,8 @@ echo
 dust_info "installed $installed/$total  ·  missing $missing  ·  missing defaults $missing_default"
 
 if [ "$write_json" = "1" ]; then
-  mkdir -p "$CODEX_REGISTRY"
-  out="$CODEX_REGISTRY/tools.json"
+  mkdir -p "$ARCHON_REGISTRY"
+  out="$ARCHON_REGISTRY/tools.json"
   ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   {
     printf '{\n'

@@ -1,0 +1,8 @@
+# Rust is enabled for the runtime-controller CLI (Kraken) and sibling crates.
+# Version comes from `.prototools` via versionFromPrototools; moon installs the
+# listed components. JavaScript/TypeScript stay off until an apps/* site needs node.
+rust:
+  syncToolchainConfig: true
+  components:
+    - clippy
+    - rustfmt

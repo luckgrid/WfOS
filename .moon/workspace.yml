@@ -1,0 +1,11 @@
+# WfOS project graph.
+# Explicit sources while packages/apps are still being scaffolded; switch to
+# `apps/*` / `packages/*` globs once each has its own moon.yml.
+projects:
+  sources:
+    wfos: "."
+    dust: "packages/dust"
+    archon: "packages/archon"
+
+vcs:
+  defaultBranch: main

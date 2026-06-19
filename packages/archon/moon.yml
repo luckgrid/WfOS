@@ -1,0 +1,9 @@
+layer: configuration
+language: unknown
+
+project:
+  name: "archon"
+  description: "Metadata plane — descriptors, schemas, policies, and the generated registry."
+
+# No tasks yet: Archon is read by Dust (doctor writes the registry) and, later, by
+# Kraken/Hypercube. It joins the graph so dependents can declare edges to it.

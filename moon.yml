@@ -1,0 +1,18 @@
+layer: configuration
+
+project:
+  name: "wfos"
+  description: "WfOS Level 0 — local-first Workflows Operating System workspace."
+
+# Root lifecycle. Requires proto + moon on PATH (see docs/setup.md).
+tasks:
+  setup:
+    script: "proto install"
+    options:
+      cache: false
+
+  doctor:
+    deps:
+      - "dust:doctor"
+    options:
+      cache: false

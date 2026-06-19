@@ -1,4 +1,4 @@
-# Codex policy — Dust agent rails (WfOS Level 0 §13).
+# Archon policy — Dust agent rails (WfOS Level 0 §13).
 # Enforced by lib/common.sh via the DUST_AGENT environment variable.
 id = "dust.agent"
 applies_to = "dust"

@@ -15,7 +15,7 @@ dust — WfOS Level 0 native substrate (manifest v$(dust_manifest_version))
 usage: dust <command> [args]
 
 commands:
-  doctor [--no-write]   detect tools, print readiness, write codex registry (agent-safe)
+  doctor [--no-write]   detect tools, print readiness, write archon registry (agent-safe)
   list [module]         list modules and tools from the manifest (agent-safe)
   env                   print the shell activation snippet (agent-safe)
   bootstrap [--dry-run] install missing tools, link configs, wire shell (human-only)

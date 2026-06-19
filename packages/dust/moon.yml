@@ -1,0 +1,28 @@
+layer: tool
+language: bash
+
+project:
+  name: "dust"
+  description: "Native substrate — global low-level Unix/Rust tools for devs and agents."
+
+# Thin wrappers over the dust dispatcher so the substrate joins the project graph.
+# doctor/list/env are read-only and agent-safe; bootstrap stays human-only and is
+# intentionally not exposed as a cached task.
+tasks:
+  doctor:
+    command: "bin/dust"
+    args: ["doctor"]
+    options:
+      cache: false
+
+  list:
+    command: "bin/dust"
+    args: ["list"]
+    options:
+      cache: false
+
+  env:
+    command: "bin/dust"
+    args: ["env"]
+    options:
+      cache: false

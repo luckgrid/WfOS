@@ -1,7 +1,7 @@
 # Dust tool library — single source of truth.
 #
 # Format: flat array-of-tables ([[tool]]) for dependency-free shell parsing.
-# Derived artifacts: Brewfile, codex/registry/tools.json (doctor), shell activations.
+# Derived artifacts: Brewfile, archon/registry/tools.json (doctor), shell activations.
 #
 # Fields:
 #   module        Dust module (shell|git|nav|session|secrets|tools|js|rust|ether|logs)

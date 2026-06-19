@@ -22,12 +22,12 @@ DUST_PKG="$(cd "$DUST_LIB/.." && pwd)"
 DUST_MANIFEST="$DUST_PKG/manifest/dust.tools.toml"
 DUST_CONFIG="$DUST_PKG/config"
 DUST_BIN="$DUST_PKG/bin"
-# wfos workspace root (…/workspaces/wfos) and codex package.
+# wfos workspace root (…/workspaces/wfos) and archon package.
 WFOS_ROOT="$(cd "$DUST_PKG/../.." && pwd)"
-CODEX_PKG="$WFOS_ROOT/packages/codex"
-CODEX_REGISTRY="$CODEX_PKG/registry"
+ARCHON_PKG="$WFOS_ROOT/packages/archon"
+ARCHON_REGISTRY="$ARCHON_PKG/registry"
 
-export DUST_LIB DUST_PKG DUST_MANIFEST DUST_CONFIG DUST_BIN WFOS_ROOT CODEX_PKG CODEX_REGISTRY
+export DUST_LIB DUST_PKG DUST_MANIFEST DUST_CONFIG DUST_BIN WFOS_ROOT ARCHON_PKG ARCHON_REGISTRY
 
 # ── logging ──────────────────────────────────────────────────────────────────
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
@@ -50,7 +50,7 @@ dust_is_agent() { [ "${DUST_AGENT:-0}" = "1" ]; }
 dust_require_human() {
   if dust_is_agent; then
     dust_err "blocked: '${1:-this command}' is mutating and not permitted in agent mode (DUST_AGENT=1)."
-    dust_err "see codex/policies/dust.agent.policy.toml"
+    dust_err "see archon/policies/dust.agent.policy.toml"
     exit 13
   fi
 }

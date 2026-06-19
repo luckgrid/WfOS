@@ -1,0 +1,80 @@
+# Architecture
+
+WfOS Level 0 is the lowest practical layer of a Workflows Operating System: the local
+machine, dev server, or sandbox where work actually happens. It does not replace your OS,
+shell, package managers, or build tools — it organizes them, routes to them, and exposes
+their meaning through a consistent local interface.
+
+The layer should be boring, practical, and powerful. It is **local-first** (no network or
+cloud account required to be useful), **configuration-driven** (metadata and policy define
+what exists and how it connects), and **modular** (every part is optional and swappable).
+
+## Archetypes vs products
+
+WfOS separates **what a component does** (archetype) from **what it is called here**
+(product / brand). Use archetypes in contracts and configs; use product names for the
+implementations in this workspace and their CLIs.
+
+| Archetype id | Purpose | Product | CLI |
+|--------------|---------|---------|-----|
+| `runtime-controller` | Discovery, routing, sessions, rails | Kraken | `krk` |
+| `package-translator` | High-level intent → packages, artifacts | Hypercube | `hqb` |
+| `native-substrate` | Native Unix/Rust tools and scripts | Dust | `dust` |
+| `portable-runtime` | WASM/WASI sandboxed components | Ether | — |
+| `metadata-plane` | Descriptors, registry, schemas, policies | Archon | — |
+| `agent-interface` | Scoped agent/daemon layer (planned) | Casper | — |
+
+Another configuration could implement `runtime-controller` with a different product or
+collapse several archetypes behind one CLI — the archetype ids stay stable in metadata.
+
+## Interface layers
+
+Above the filesystem, three interface layers expose the system at the depth that matches
+how someone works. Most operators never touch raw paths; they work through the layer that
+fits their level.
+
+```txt
+Toolchain layer (low)     configs, tools, libraries, CLIs, dotfiles, native manifests
+Agent layer   (mid)       agents, skills, prompts, rails, MCP surfaces, scoped graphs
+Application layer (high)  apps, sites, dashboards — minimal path surface
+```
+
+A developer lives mostly in the toolchain layer. An agent operator works through the agent
+layer (scoped skills and tools, not folder trees). A reader of the docs site only sees the
+application layer. [Archon](archon.md) binds these layers to what lives on disk: full
+abstraction for higher levels, direct access for lower levels when needed.
+
+## System map
+
+```mermaid
+flowchart TD
+  Dev[Developer / Agent] --> KRK[Kraken krk]
+  KRK --> CX[Archon metadata]
+  KRK --> HQB[Hypercube hqb]
+  KRK --> DUST[Dust native tools]
+  KRK --> ETH[Ether WASM/WASI]
+  HQB --> CX
+  DUST --> CX
+  CX --> Reg[registry + descriptors + policies]
+```
+
+Kraken reads Archon, routes commands, runs native tools through Dust and portable components
+through Ether, and asks Hypercube to translate higher-level intent into packages. Archon is
+the shared meaning underneath all of it.
+
+## Principles
+
+- **Native manifests stay authoritative.** Archon describes meaning, routing, policy, and
+  relationships; it never replaces `Cargo.toml`, `package.json`, `mise.toml`, or a lockfile.
+- **Swappable by default.** fzf ↔ skim, tmux ↔ zellij, mise ↔ proto, git ↔ jj. Nothing
+  hard-locks a workflow; the controller detects and routes.
+- **Local-first scope.** Everything works offline. Remotes, sync, and federation are layers
+  you add later, not prerequisites.
+- **Non-disruptive adoption.** Use one package without the rest. Keep your existing shell,
+  prompt, and editor; let WfOS slot in beside them.
+
+## Where to go next
+
+- Engine internals and the CLI/daemon/TUI plan: [runtime-architecture.md](runtime-architecture.md)
+- How the workspace is built and tasks run: [monorepo.md](monorepo.md)
+- The implemented pair: [dust.md](dust.md) and [archon.md](archon.md)
