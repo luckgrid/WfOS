@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# dust doctor — detect Dust tools, print a readiness report, write codex registry.
+# Read-only and agent-safe.
+set -uo pipefail
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$_self/../lib/common.sh"
+# shellcheck source=../lib/manifest.sh
+source "$_self/../lib/manifest.sh"
+
+_json_escape() { printf '%s' "$1" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g'; }
+
+total=0; installed=0; missing=0; missing_default=0
+json_tools=""
+current_module=""
+
+write_json=1
+[ "${1:-}" = "--no-write" ] && write_json=0
+
+dust_info "Dust readiness (manifest v$(dust_manifest_version))"
+echo
+
+# shellcheck disable=SC2034  # fields bound positionally; not all used here
+while IFS=$'\037' read -r module id def brew detect agent_safe alts purpose; do
+  [ -n "$id" ] || continue
+  if [ "$module" != "$current_module" ]; then
+    [ -n "$current_module" ] && echo
+    printf '%s%s%s\n' "$_C_BOLD" "$module" "$_C_RESET"
+    current_module="$module"
+  fi
+  total=$((total + 1))
+  if dust_has "$detect"; then
+    ver="$(dust_version "$detect")"
+    installed=$((installed + 1))
+    printf '  %sok%s  %-14s %s%s%s\n' "$_C_GREEN" "$_C_RESET" "$id" "$_C_DIM" "$ver" "$_C_RESET"
+    is_installed=true
+  else
+    missing=$((missing + 1))
+    ver=""
+    if [ "$def" = "true" ]; then
+      missing_default=$((missing_default + 1))
+      printf '  %smiss%s %-14s %s(default, %s)%s\n' "$_C_RED" "$_C_RESET" "$id" "$_C_DIM" "${purpose}" "$_C_RESET"
+    else
+      printf '  %s--%s   %-14s %s(optional, %s)%s\n' "$_C_YELLOW" "$_C_RESET" "$id" "$_C_DIM" "${purpose}" "$_C_RESET"
+    fi
+    is_installed=false
+  fi
+  obj=$(printf '{"module":"%s","id":"%s","installed":%s,"default":%s,"agent_safe":%s,"detect":"%s","brew":"%s","version":"%s"}' \
+    "$module" "$id" "$is_installed" "$def" "$agent_safe" "$detect" "$brew" "$(_json_escape "$ver")")
+  if [ -z "$json_tools" ]; then json_tools="$obj"; else json_tools="$json_tools,$obj"; fi
+done < <(dust_manifest_tsv)
+
+echo
+dust_info "installed $installed/$total  ·  missing $missing  ·  missing defaults $missing_default"
+
+if [ "$write_json" = "1" ]; then
+  mkdir -p "$CODEX_REGISTRY"
+  out="$CODEX_REGISTRY/tools.json"
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  {
+    printf '{\n'
+    printf '  "generated_at": "%s",\n' "$ts"
+    printf '  "manifest_version": "%s",\n' "$(dust_manifest_version)"
+    printf '  "host": "%s",\n' "$(_json_escape "$(uname -sm)")"
+    printf '  "summary": {"total":%s,"installed":%s,"missing":%s,"missing_default":%s},\n' \
+      "$total" "$installed" "$missing" "$missing_default"
+    printf '  "tools": [%s]\n' "$json_tools"
+    printf '}\n'
+  } > "$out"
+  dust_ok "wrote $out"
+fi

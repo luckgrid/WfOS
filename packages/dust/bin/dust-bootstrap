@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# dust bootstrap — install missing Dust tools (Homebrew), symlink configs, wire the shell.
+# Mutating: blocked in agent mode.
+set -uo pipefail
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$_self/../lib/common.sh"
+# shellcheck source=../lib/manifest.sh
+source "$_self/../lib/manifest.sh"
+# shellcheck source=../lib/configure.sh
+source "$_self/../lib/configure.sh"
+
+dust_require_human "dust bootstrap"
+
+dry=0
+[ "${1:-}" = "--dry-run" ] && dry=1
+
+dust_has brew || dust_die "Homebrew not found. Install from https://brew.sh first."
+
+# 1) Collect installable, missing tools (non-empty brew + not detected).
+to_install=()
+# shellcheck disable=SC2034  # fields bound positionally; only brew/detect used here
+while IFS=$'\037' read -r module id def brew detect agent_safe alts purpose; do
+  [ -n "$id" ] || continue
+  [ -n "$brew" ] || continue
+  dust_has "$detect" && continue
+  to_install+=("$brew")
+done < <(dust_manifest_tsv)
+
+if [ "${#to_install[@]}" -eq 0 ]; then
+  dust_ok "all installable Dust tools already present"
+else
+  dust_info "missing brew formulae: ${to_install[*]}"
+  if [ "$dry" = "1" ]; then
+    dust_warn "dry-run: skipping installs"
+  else
+    for f in "${to_install[@]}"; do
+      dust_info "brew install $f"
+      if brew install "$f"; then
+        dust_ok "installed $f"
+      else
+        dust_warn "failed to install $f (continuing)"
+      fi
+    done
+  fi
+fi
+
+# 2) Configure tool settings + shell wiring (idempotent).
+if [ "$dry" = "1" ]; then
+  dust_warn "dry-run: skipping config + shell wiring"
+else
+  dust_info "linking config templates"
+  dust_configure_shell
+  dust_configure_session
+  dust_configure_tools
+  dust_link_cli
+  dust_wire_shell
+
+  if dust_has mise; then
+    dust_info "mise present — runtimes are defined in ~/.config/mise/config.toml"
+    dust_info "run 'mise install' to provision pinned runtimes (skipped here to stay fast)"
+  fi
+fi
+
+echo
+dust_info "re-checking readiness"
+echo
+exec "$_self/dust-doctor"

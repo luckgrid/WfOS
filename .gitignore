@@ -1,0 +1,5 @@
+# OS
+.DS_Store
+
+# Generated, host-specific Codex output
+packages/codex/registry/tools.json

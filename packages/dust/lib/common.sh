@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Dust shared helpers: paths, logging, agent rails. Sourced by all bin/ entrypoints.
+
+# Resolve a path, following symlinks, without requiring GNU readlink -f.
+_dust_realpath() {
+  local target="$1" dir
+  while [ -L "$target" ]; do
+    local link
+    link="$(readlink "$target")"
+    case "$link" in
+      /*) target="$link" ;;
+      *) target="$(cd "$(dirname "$target")" && pwd)/$link" ;;
+    esac
+  done
+  dir="$(cd "$(dirname "$target")" && pwd)"
+  printf '%s/%s\n' "$dir" "$(basename "$target")"
+}
+
+# DUST_LIB = this file's dir; DUST_PKG = the dust package root.
+DUST_LIB="$(cd "$(dirname "$(_dust_realpath "${BASH_SOURCE[0]}")")" && pwd)"
+DUST_PKG="$(cd "$DUST_LIB/.." && pwd)"
+DUST_MANIFEST="$DUST_PKG/manifest/dust.tools.toml"
+DUST_CONFIG="$DUST_PKG/config"
+DUST_BIN="$DUST_PKG/bin"
+# wfos workspace root (…/workspaces/wfos) and codex package.
+WFOS_ROOT="$(cd "$DUST_PKG/../.." && pwd)"
+CODEX_PKG="$WFOS_ROOT/packages/codex"
+CODEX_REGISTRY="$CODEX_PKG/registry"
+
+export DUST_LIB DUST_PKG DUST_MANIFEST DUST_CONFIG DUST_BIN WFOS_ROOT CODEX_PKG CODEX_REGISTRY
+
+# ── logging ──────────────────────────────────────────────────────────────────
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
+  _C_RESET=$'\033[0m'; _C_DIM=$'\033[2m'; _C_BOLD=$'\033[1m'
+  _C_GREEN=$'\033[32m'; _C_YELLOW=$'\033[33m'; _C_RED=$'\033[31m'; _C_BLUE=$'\033[34m'
+else
+  _C_RESET=''; _C_DIM=''; _C_BOLD=''; _C_GREEN=''; _C_YELLOW=''; _C_RED=''; _C_BLUE=''
+fi
+
+dust_info()  { printf '%s\n' "${_C_BLUE}::${_C_RESET} $*"; }
+dust_ok()    { printf '%s\n' "${_C_GREEN}ok${_C_RESET} $*"; }
+dust_warn()  { printf '%s\n' "${_C_YELLOW}!!${_C_RESET} $*" >&2; }
+dust_err()   { printf '%s\n' "${_C_RED}xx${_C_RESET} $*" >&2; }
+dust_die()   { dust_err "$*"; exit 1; }
+
+# ── agent rails ──────────────────────────────────────────────────────────────
+# Mutating commands must call dust_require_human. In DUST_AGENT=1 mode they are blocked.
+dust_is_agent() { [ "${DUST_AGENT:-0}" = "1" ]; }
+
+dust_require_human() {
+  if dust_is_agent; then
+    dust_err "blocked: '${1:-this command}' is mutating and not permitted in agent mode (DUST_AGENT=1)."
+    dust_err "see codex/policies/dust.agent.policy.toml"
+    exit 13
+  fi
+}
+
+# ── tool detection ───────────────────────────────────────────────────────────
+dust_has() { command -v "$1" >/dev/null 2>&1; }
+
+dust_version() {
+  local cmd="$1"
+  dust_has "$cmd" || { printf '%s' "-"; return 1; }
+  local v
+  v="$("$cmd" --version 2>/dev/null | head -1)" || v=""
+  [ -n "$v" ] || v="$("$cmd" -V 2>/dev/null | head -1)" || v=""
+  [ -n "$v" ] || v="installed"
+  printf '%s' "$v"
+}

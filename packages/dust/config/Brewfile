@@ -1,0 +1,43 @@
+# Dust tool library — Homebrew bundle (derived from manifest/dust.tools.toml).
+# Install all with:  brew bundle --file=Brewfile
+# `dust bootstrap` installs only the missing subset.
+
+# shell
+brew "starship"
+brew "shellcheck"
+
+# git
+brew "git"
+brew "gh"
+brew "jj"
+brew "lazygit"
+brew "git-delta"
+
+# nav
+brew "fzf"
+brew "zoxide"
+brew "eza"
+brew "bat"
+brew "ripgrep"
+brew "fd"
+brew "jq"
+brew "sk"
+
+# session
+brew "tmux"
+brew "zellij"
+
+# secrets
+brew "pass"
+brew "age"
+brew "sops"
+
+# tools
+brew "mise"
+brew "direnv"
+
+# rust
+brew "cargo-nextest"
+
+# ether
+brew "wasmtime"

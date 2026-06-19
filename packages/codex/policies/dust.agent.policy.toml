@@ -1,0 +1,20 @@
+# Codex policy — Dust agent rails (WfOS Level 0 §13).
+# Enforced by lib/common.sh via the DUST_AGENT environment variable.
+id = "dust.agent"
+applies_to = "dust"
+version = "0.1.0"
+
+[agent]
+# When DUST_AGENT=1, only read-only commands run; mutating ones are blocked (exit 13).
+env_flag = "DUST_AGENT"
+allow = ["doctor", "list", "env", "version", "help"]
+block = ["bootstrap"]
+
+[gates]
+# Capabilities agents must never exercise directly at Level 0.
+no_global_install = true        # no brew/mise installs
+no_secret_read = true           # no pass/age/sops invocation
+no_shell_mutation = true        # no edits to ~/.zshrc or ~/.config symlinks
+
+[rationale]
+text = "Detection and reporting are safe for agents; installing software, reading secrets, and editing dotfiles require a human."

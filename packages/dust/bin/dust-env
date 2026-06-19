@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# dust env — print the Dust shell activation snippet. Read-only and agent-safe.
+set -uo pipefail
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$_self/../lib/common.sh"
+
+fragment="$DUST_CONFIG/shell/dust.zsh"
+if [ -f "$fragment" ]; then
+  cat "$fragment"
+else
+  dust_die "missing shell fragment: $fragment"
+fi

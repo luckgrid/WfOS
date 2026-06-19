@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# dust — native substrate dispatcher (WfOS Level 0).
+set -uo pipefail
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$_self/../lib/common.sh"
+# shellcheck source=../lib/manifest.sh
+source "$_self/../lib/manifest.sh"
+
+usage() {
+  cat <<EOF
+dust — WfOS Level 0 native substrate (manifest v$(dust_manifest_version))
+
+usage: dust <command> [args]
+
+commands:
+  doctor [--no-write]   detect tools, print readiness, write codex registry (agent-safe)
+  list [module]         list modules and tools from the manifest (agent-safe)
+  env                   print the shell activation snippet (agent-safe)
+  bootstrap [--dry-run] install missing tools, link configs, wire shell (human-only)
+  version               print manifest version
+  help                  show this help
+
+agent mode: set DUST_AGENT=1 to block mutating commands (bootstrap/installs).
+EOF
+}
+
+cmd_list() {
+  local filter="${1:-}"
+  local current=""
+  # shellcheck disable=SC2034  # fields bound positionally; not all used here
+  while IFS=$'\037' read -r module id def brew detect agent_safe alts purpose; do
+    [ -n "$id" ] || continue
+    [ -n "$filter" ] && [ "$module" != "$filter" ] && continue
+    if [ "$module" != "$current" ]; then
+      [ -n "$current" ] && echo
+      printf '%s%s%s\n' "$_C_BOLD" "$module" "$_C_RESET"
+      current="$module"
+    fi
+    local tag=""; [ "$def" = "true" ] && tag="${_C_DIM}(default)${_C_RESET}"
+    printf '  %-14s %s %s%s%s\n' "$id" "$tag" "$_C_DIM" "$purpose" "$_C_RESET"
+  done < <(dust_manifest_tsv)
+}
+
+main() {
+  local cmd="${1:-help}"; shift || true
+  case "$cmd" in
+    doctor)    exec "$_self/dust-doctor" "$@" ;;
+    bootstrap) exec "$_self/dust-bootstrap" "$@" ;;
+    env)       exec "$_self/dust-env" "$@" ;;
+    list)      cmd_list "${1:-}" ;;
+    version)   dust_manifest_version ;;
+    help|-h|--help) usage ;;
+    *) dust_err "unknown command: $cmd"; echo; usage; exit 1 ;;
+  esac
+}
+
+main "$@"
