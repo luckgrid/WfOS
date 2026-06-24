@@ -66,5 +66,7 @@ per `../archon/policies/dust.agent.policy.toml`. See [`AGENTS.md`](AGENTS.md) an
 ## Related
 
 - [`dotfiles/README.md`](dotfiles/README.md) — chezmoi source (profiles, validation, promotion)
+- [`dotfiles/SECRETS.md`](dotfiles/SECRETS.md) — tiered vault model + agent secret-read hard block
+- [`secrets/README.md`](secrets/README.md) — sops + age fixtures (files vault)
 - [`../archon/README.md`](../archon/README.md) — metadata this package produces and is governed by
 - [`../../docs/native-substrate.md`](../../docs/native-substrate.md) · [`../../docs/setup.md`](../../docs/setup.md)

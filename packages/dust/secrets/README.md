@@ -5,32 +5,45 @@ are encrypted with [sops](https://github.com/getsops/sops) using an [age](https:
 recipient. It is the counterpart to the interactive `pass` vault (see
 [`../dotfiles/SECRETS.md`](../dotfiles/SECRETS.md)).
 
-> **No secret values live here.** [`sample.config.yaml`](sample.config.yaml) is a structure-only
-> example with fake placeholders. A sops-encrypted file commits *ciphertext*, not plaintext, so it
-> is safe to track — but encryption is **deferred** until an age recipient key is provisioned (a
-> human step). This session defines the rails; it does not generate key material.
+> **Fixture-only key material.** The committed [`sample.config.enc.yaml`](sample.config.enc.yaml)
+> uses a **repo-local test age keypair** — not a production secret. Plaintext structure lives in
+> [`sample.config.yaml`](sample.config.yaml) for editing; only the `.enc.yaml` file is meant for git.
 
 ## Files
 
 | File | Role |
 |------|------|
-| [`.sops.yaml`](.sops.yaml) | creation rules: which files encrypt to which age recipient (placeholder) |
-| [`sample.config.yaml`](sample.config.yaml) | plaintext **structure** only — keys + fake values |
+| [`.sops.yaml`](.sops.yaml) | creation rules: `.enc.*` files encrypt to the fixture age recipient |
+| [`sample.config.yaml`](sample.config.yaml) | plaintext **structure** only — keys + fake placeholders (edit source) |
+| [`sample.config.enc.yaml`](sample.config.enc.yaml) | sops-encrypted values — safe to commit (ciphertext only) |
 
-## Recipe (deferred — run on a host with a provisioned age key)
+## Fixture-only age key (not production)
+
+Public recipient (in `.sops.yaml`):
+
+```txt
+age1sypm2y50ryrz80fq70gpavmrgp4wrscru8zz9v6yuats4rc393sq54ftfs
+```
+
+Paired test private key (for local decrypt/regeneration only — **do not reuse in production**):
+
+```txt
+AGE-SECRET-KEY-1CRECGV6QKCCRP8USMWQ8Q27M59YC9SYEE68E7ENRS4CM94XNY6KS93R0EG
+```
+
+## Recipe
 
 ```bash
-# 1. Generate / locate an age key (human step; key stays out of git).
-age-keygen -o ~/.config/wfos-secrets/age/keys.txt   # prints the public recipient
+# Regenerate ciphertext after editing sample.config.yaml (fixture recipient):
+sops --encrypt --age age1sypm2y50ryrz80fq70gpavmrgp4wrscru8zz9v6yuats4rc393sq54ftfs \
+  sample.config.yaml > sample.config.enc.yaml
 
-# 2. Put the real recipient (age1...) into .sops.yaml, replacing the placeholder.
-
-# 3. Encrypt values in place -> a committable, diff-friendly ciphertext file.
-sops --encrypt sample.config.yaml > sample.config.enc.yaml
-
-# 4. Decrypt is a HUMAN-only action (agents are hard-blocked: no_secret_read).
-sops --decrypt sample.config.enc.yaml
+# Decrypt is HUMAN-only (agents are hard-blocked: no_secret_read):
+SOPS_AGE_KEY_FILE=<path-to-fixture-key> sops --decrypt sample.config.enc.yaml
 ```
+
+Production hosts: generate your own key (`age-keygen`), replace the recipient in `.sops.yaml`,
+and never commit the private key.
 
 ## Why tiered
 

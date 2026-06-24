@@ -37,7 +37,15 @@ material can never enter agent context. `dust doctor` asserts the rail on every 
 the blocked tools are marked `agent_safe = false` in the manifest, the policy gate is set, and a
 live guard self-test blocks under `DUST_AGENT=1`. A misconfigured rail makes `dust doctor` exit
 non-zero. The tiered vault model (interactive `pass` vs file-oriented `sops` + `age`) is documented
-in the secrets module.
+in [`packages/dust/dotfiles/SECRETS.md`](../packages/dust/dotfiles/SECRETS.md).
+
+### Enforcement boundary
+
+The guard applies to **Dust-owned code paths** that would resolve a secret value (today:
+`dust doctor`, validators, and any future substrate command that shells out to a vault tool).
+Agents can still invoke `pass`/`age`/`sops` directly on `PATH` unless a shell wrapper or the
+planned runtime-controller command routing blocks them. Level 0 intentionally stops at policy +
+manifest flags + doctor assertion; broader OS-level interception is deferred to Kraken.
 
 ## Conventions
 

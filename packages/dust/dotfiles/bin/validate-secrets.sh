@@ -6,7 +6,7 @@
 #   2. hard-block  — policy no_secret_read=true; blocked tools agent_safe=false; DUST_AGENT=1
 #                    guard exits 13 (live self-test of the guard, NOT a real secret read)
 #   3. chezmoi     — pass-reference template guards on the profile `secrets` flag; the secrets
-#                    target is excluded for agent-safe; no secret-looking literal in source/fixtures
+#                    target is excluded for agent-safe; sops encrypted fixture present; no literals
 #   4. gitleaks    — present in the manifest secrets module + the candidate install set (Brewfile)
 #   5. docs        — SECRETS.md present
 #
@@ -27,6 +27,7 @@ PROFILES="$SRC/.chezmoidata/profiles.toml"
 IGNORE="$SRC/.chezmoiignore.tmpl"
 SECRET_TMPL="$SRC/private_dot_config/wfos-secrets/env.sh.tmpl"
 FIXTURES="$DUST_PKG/secrets"
+ENC_FIXTURE="$FIXTURES/sample.config.enc.yaml"
 
 # shellcheck source=../../lib/common.sh
 source "$COMMON"
@@ -116,20 +117,35 @@ if [ -f "$PROFILES" ]; then
 fi
 [ -f "$IGNORE" ] && grep -q 'wfos-secrets' "$IGNORE" && note ".chezmoiignore.tmpl maps secrets -> .config/wfos-secrets" \
   || bad ".chezmoiignore.tmpl does not map the secrets category to wfos-secrets"
-# no secret-looking literal in the templates or fixtures.
+# no secret-looking literal in the templates (fixtures allow sops ciphertext + fixture age key docs).
 secret_re='BEGIN[[:space:]]+(RSA|OPENSSH|PGP|EC)[[:space:]]+PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]+|-----BEGIN'
-if grep -REn "$secret_re" "$SRC/private_dot_config" "$FIXTURES" >/dev/null 2>&1; then
-  bad "secret-looking literal found:"; grep -REn "$secret_re" "$SRC/private_dot_config" "$FIXTURES" | sed 's/^/    /'
+if grep -REn "$secret_re" "$SRC/private_dot_config" >/dev/null 2>&1; then
+  bad "secret-looking literal found:"; grep -REn "$secret_re" "$SRC/private_dot_config" | sed 's/^/    /'
 else
-  note "no secret-looking literals in templates or fixtures (referenced, not stored)"
+  note "no secret-looking literals in chezmoi secret templates"
 fi
-# live render is deferred when chezmoi is absent; never render the secret template here.
+# sops encrypted fixture: committed ciphertext, no plaintext placeholders.
+if [ -f "$ENC_FIXTURE" ] && [ -s "$ENC_FIXTURE" ]; then
+  grep -q '^sops:' "$ENC_FIXTURE" && note "sample.config.enc.yaml has sops metadata" \
+    || bad "sample.config.enc.yaml missing sops metadata"
+  grep -q 'ENC\[AES256_GCM' "$ENC_FIXTURE" && note "sample.config.enc.yaml values are encrypted" \
+    || bad "sample.config.enc.yaml does not look encrypted"
+  grep -q 'REPLACE_VIA_SOPS' "$ENC_FIXTURE" && bad "sample.config.enc.yaml still has plaintext placeholders" \
+    || note "no plaintext placeholders in encrypted fixture"
+else
+  bad "missing or empty sops fixture: ${ENC_FIXTURE#"$DUST_PKG"/}"
+fi
+# when chezmoi is present, prove agent-safe ignore output excludes wfos-secrets (no pass call).
 if command -v chezmoi >/dev/null 2>&1; then
-  note "chezmoi present — live agent-safe diff is a human step (not run: would touch \$HOME/secrets)"
+  agent_ignored="$(chezmoi execute-template --source "$SRC" \
+    --override-data '{"profile":"agent-safe"}' < "$IGNORE" 2>/dev/null || true)"
+  printf '%s' "$agent_ignored" | grep -q 'wfos-secrets' && note "chezmoi: agent-safe ignore lists wfos-secrets" \
+    || bad "chezmoi: agent-safe ignore missing wfos-secrets"
+  note "chezmoi present — human smoke: WFOS_PROFILE=agent-safe chezmoi diff --source <dotfiles>"
 else
   note "chezmoi NOT installed — live 'chezmoi diff' DEFERRED (install via dust bootstrap)"
 fi
-[ "$fail" -eq 0 ] && ok "chezmoi secret references (guarded; agent-safe excluded; deferred render)"
+[ "$fail" -eq 0 ] && ok "chezmoi secret references (guarded; agent-safe excluded; sops fixture)"
 
 # 4. gitleaks prerequisite ---------------------------------------------------
 echo "[4/5] gitleaks prerequisite"

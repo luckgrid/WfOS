@@ -36,6 +36,7 @@ detected if present. See [native-substrate.md](native-substrate.md).
 | [zsh-syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting) | core | real-time command-line syntax highlighting (sourced plugin) | BSD-3-Clause |
 | [pass](https://www.passwordstore.org/) | core | Unix password store (agent-blocked) | GPL-2.0 |
 | [age](https://github.com/FiloSottile/age) / [sops](https://github.com/getsops/sops) | optional | file/secret encryption (config files: sops+age; interactive: pass) | BSD-3 / MPL-2.0 |
+| [gitleaks](https://github.com/gitleaks/gitleaks) | optional | scan staged/committed files for leaked secrets (pre-commit gate candidate) | MIT |
 | [chezmoi](https://www.chezmoi.io/) | optional | cross-machine dotfile manager (complements Dust's symlink bootstrap) | MIT |
 | [choose](https://github.com/theryangeary/choose) | optional | field selector — human-friendly `cut`/`awk` alternative | MIT |
 | [zsh-autocomplete](https://github.com/marlonrichert/zsh-autocomplete) | optional | real-time menu completion (sourced plugin; can conflict) | MIT |
@@ -46,6 +47,7 @@ detected if present. See [native-substrate.md](native-substrate.md).
 
 Secrets are tiered by concern: **pass** for interactive CLI logins/keys, **sops + age** for
 configuration files checked into git (encrypts values, keeps keys and diffs readable). See
+[`packages/dust/dotfiles/SECRETS.md`](../packages/dust/dotfiles/SECRETS.md) and
 [native-substrate.md](native-substrate.md#modules).
 
 Dotfiles practice and bootstrap inspiration: [dotfiles.github.io](https://dotfiles.github.io/)

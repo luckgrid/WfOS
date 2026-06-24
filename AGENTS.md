@@ -65,3 +65,5 @@ you would review a dependency. Optional AI enhancements are catalogued in
   override in `~/.zshenv` when your layout differs; `bootstrap` exports the resolved path.
 - Local dotfiles testing: `packages/dust/dotfiles/bin/validate-dotfiles.sh` (optional `--apply` for temp
   HOME smoke test); `moon run dust:validate-dotfiles`.
+- Secrets rails validation: `packages/dust/dotfiles/bin/validate-secrets.sh`;
+  `moon run dust:validate-secrets`.

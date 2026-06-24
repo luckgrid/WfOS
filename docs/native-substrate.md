@@ -24,7 +24,7 @@ The generated tool registry is written to the [Archon](metadata-plane.md) packag
 
 | Command | Mutating | Agent-safe | Purpose |
 |---------|----------|------------|---------|
-| `dust doctor` | no | yes | detect tools, print readiness, write the Archon registry |
+| `dust doctor` | no | yes | detect tools, print readiness, assert secrets rail, write the Archon registry |
 | `dust list [module]` | no | yes | list modules and tools from the manifest |
 | `dust env` | no | yes | print the shell activation snippet |
 | `dust bootstrap [--dry-run]` | yes | no | install missing tools (brew + mise), symlink configs, wire `~/.zshrc` |
@@ -44,7 +44,7 @@ alternatives are detected if present but never forced.
 | `nav` | fzf, zoxide, eza, bat, ripgrep, fd, jq, tldr | skim, choose | search, selection, navigation, cheatsheets |
 | `system` | btop, dua | — | resource monitor and disk-usage visualizer |
 | `session` | tmux | zellij | persistent terminal sessions |
-| `secrets` | pass | age, sops | local secret handling (agent-blocked) |
+| `secrets` | pass | age, sops, gitleaks | tiered vaults (`pass` interactive; `sops`+`age` files); leak scan via gitleaks (candidate) |
 | `tools` | mise, direnv | proto, asdf | runtime/version + per-dir env |
 | `dotfiles` | — | chezmoi | cross-machine dotfile management |
 | `js` | node, pnpm | bun, deno, aube | JS/TS runtime and package routing |
@@ -117,12 +117,16 @@ or instead of the symlink flow. It is never auto-installed and Dust does not req
 
 A draft chezmoi source tree lives at [`packages/dust/dotfiles/`](../packages/dust/dotfiles/README.md).
 It defines four profile classes (`$WFOS_PROFILE`, default `local-macos-full`) that renders a
-narrower environment for `headless-dev` and `agent-safe` machines. Validate without touching
-`$HOME`:
+narrower environment for `headless-dev` and `agent-safe` machines. The tiered secrets model
+(`.chezmoidata/vaults.toml`, pass vs sops+age) is documented in
+[`packages/dust/dotfiles/SECRETS.md`](../packages/dust/dotfiles/SECRETS.md); sops fixtures live in
+[`packages/dust/secrets/`](../packages/dust/secrets/README.md). Validate without touching `$HOME`:
 
 ```bash
 bash packages/dust/dotfiles/bin/validate.sh
+bash packages/dust/dotfiles/bin/validate-secrets.sh     # vault contract, agent hard-block, gitleaks
 bash packages/dust/dotfiles/bin/validate-dotfiles.sh      # + profile preview when chezmoi is installed
+moon run dust:validate-secrets
 moon run dust:validate-dotfiles
 ```
 
@@ -135,3 +139,8 @@ README for the promotion workflow.
 (`doctor`, `list`, `env`, `version`, `help`) run; mutating ones (`bootstrap`, installs,
 secret reads) are blocked. The rules live in the Archon policy
 `packages/archon/policies/dust.agent.policy.toml`; see [agent-rails.md](agent-rails.md).
+
+`dust doctor` ends with a **secrets rail** assertion: every policy-blocked vault tool
+(`pass`, `age`, `sops`) must be `agent_safe = false` in the manifest, `no_secret_read` must
+be set, and a live `dust_require_secret_access` self-test must block under `DUST_AGENT=1`.
+Doctor exits non-zero on rail drift so misconfiguration cannot slip past agents silently.

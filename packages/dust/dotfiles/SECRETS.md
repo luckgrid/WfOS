@@ -43,6 +43,13 @@ makes `no_secret_read = true` authoritative and lists the blocked tools. Under `
 (manifest flags + policy gate + a live guard self-test). Detection of a tool's *presence* is safe;
 *invoking* it to read a value is blocked.
 
+### Enforcement boundary
+
+The guard applies to **Dust-owned code paths** that would resolve a secret value (validators,
+`dust doctor`, and future substrate commands). Agents can still invoke `pass`/`age`/`sops`
+directly on `PATH` unless a shell wrapper or the planned runtime-controller command routing
+blocks them. Level 0 stops at policy + manifest flags + doctor assertion.
+
 ## chezmoi integration
 
 chezmoi resolves secrets at **apply** time only, never storing values in source:
@@ -52,9 +59,24 @@ chezmoi resolves secrets at **apply** time only, never storing values in source:
   `headless-dev` profiles exclude the whole `secrets` category via
   [`.chezmoiignore.tmpl`](.chezmoiignore.tmpl), so `chezmoi diff` for those profiles never even
   renders the file — no secret reference is resolved.
-- **sops + age files** follow the recipe in [`../secrets/README.md`](../secrets/README.md). The
-  `.sops.yaml` creation rules and a structure-only sample live there; actual encryption is deferred
-  until an age recipient key is provisioned.
+- **sops + age files** follow [`../secrets/README.md`](../secrets/README.md). The committed
+  [`sample.config.enc.yaml`](../secrets/sample.config.enc.yaml) is a fixture-only ciphertext example;
+  [`sample.config.yaml`](../secrets/sample.config.yaml) holds plaintext structure for edits.
+
+### Human smoke (when chezmoi is installed)
+
+```bash
+export WFOS_PROFILE=agent-safe
+chezmoi diff --source "$(pwd)"   # from packages/dust/dotfiles — must NOT list wfos-secrets
+```
+
+`local-macos-full` may resolve pass references on `chezmoi apply` only (human-gated).
+
+## Human bootstrap (not exercised in validators)
+
+- Initialize `pass` (`pass init`) and your GnuPG identity before relying on pass-backed templates.
+- Install chezmoi (`brew install chezmoi` or `dust bootstrap` / dotfiles module) before live diff.
+- Provision a production age recipient before replacing the fixture key in `.sops.yaml`.
 
 ## gitleaks (leak gate)
 

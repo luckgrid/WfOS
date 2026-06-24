@@ -47,7 +47,8 @@ step=$((step + 1))
 printf '\n== [%d/%d] per-profile ignore preview (.chezmoiignore.tmpl) ==\n' "$step" "$total"
 for prof in "${PROFILES[@]}"; do
   printf '\n--- %s ---\n' "$prof"
-  ignored="$(WFOS_PROFILE="$prof" chezmoi execute-template --init --source "$SRC" \
+  ignored="$(chezmoi execute-template --source "$SRC" \
+    --override-data "{\"profile\":\"$prof\",\"git\":{\"name\":\"\",\"email\":\"\"}}" \
     < "$SRC/.chezmoiignore.tmpl" 2>/dev/null | sed '/^[[:space:]]*$/d' || true)"
   if [ -n "$ignored" ]; then printf '%s\n' "$ignored"; else printf '(none)\n'; fi
 done
@@ -57,7 +58,8 @@ printf '\n== [%d/%d] template render preview (all profiles) ==\n' "$step" "$tota
 render_fail=0
 for prof in "${PROFILES[@]}"; do
   for t in "${TEMPLATES[@]}"; do
-    if ! WFOS_PROFILE="$prof" chezmoi execute-template --init --source "$SRC" \
+    if ! chezmoi execute-template --source "$SRC" \
+      --override-data "{\"profile\":\"$prof\",\"git\":{\"name\":\"\",\"email\":\"\"}}" \
       < "$SRC/$t" >/dev/null 2>&1; then
       printf 'FAIL render %s [%s]\n' "$t" "$prof" >&2
       render_fail=1

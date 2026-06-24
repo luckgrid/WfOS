@@ -163,7 +163,9 @@ if command -v chezmoi >/dev/null 2>&1; then
   rendered=0
   for prof in local-macos-full headless-dev agent-safe workstreams-maintainer; do
     for t in dot_zshrc.tmpl dot_gitconfig.tmpl dot_config/zsh/plugins.zsh.tmpl; do
-      if WFOS_PROFILE="$prof" chezmoi execute-template --init --source "$SRC" < "$SRC/$t" > "$tmp/out" 2>"$tmp/err"; then
+      if chezmoi execute-template --source "$SRC" \
+        --override-data "{\"profile\":\"$prof\",\"git\":{\"name\":\"\",\"email\":\"\"}}" \
+        < "$SRC/$t" > "$tmp/out" 2>"$tmp/err"; then
         note "rendered $t [$prof]"; rendered=$((rendered+1))
       else
         bad "$t [$prof] failed to render:"; sed 's/^/    /' "$tmp/err"
