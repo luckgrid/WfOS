@@ -1,4 +1,5 @@
-# Dust tool library — Homebrew bundle (derived from manifest/dust.tools.toml).
+# Dust tool library — Homebrew bundle (GENERATED from manifest/dust.tools.toml).
+# Regenerate with:  dust gen brewfile   (do not hand-edit — the manifest is the source of truth).
 # Install all with:  brew bundle --file=Brewfile
 # `dust bootstrap` installs only the missing subset.
 
@@ -54,3 +55,6 @@ brew "cargo-nextest"
 
 # ether
 brew "wasmtime"
+
+# agent
+brew "rtk"

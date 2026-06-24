@@ -17,8 +17,8 @@ the source of truth for detailed commands and architecture.
 
 | Allowed (read-only) | Blocked (human-only) |
 |---------------------|----------------------|
-| `dust doctor`, `dust list`, `dust env` | `dust bootstrap`, brew/mise installs |
-| `moon run dust:doctor`, `moon query …` | reading secrets (`pass`/`age`/`sops`) |
+| `dust doctor`, `dust list`, `dust gen`, `dust env` | `dust bootstrap`, brew/mise installs |
+| `moon run dust:doctor`, `moon run dust:gen-check`, `moon run dust:validate-substrate`, `moon query …` | reading secrets (`pass`/`age`/`sops`) |
 | read descriptors, schemas, policies, registry | editing `~/.zshrc` or `~/.config` symlinks |
 | read/edit files in this repo | starting servers / `zola serve` / long-running dev tasks |
 
@@ -67,3 +67,5 @@ you would review a dependency. Optional AI enhancements are catalogued in
   HOME smoke test); `moon run dust:validate-dotfiles`.
 - Secrets rails validation: `packages/dust/dotfiles/bin/validate-secrets.sh`;
   `moon run dust:validate-secrets`.
+- Substrate gate: `packages/dust/bin/validate-substrate.sh` (manifest derivation, doctor JSON,
+  env, RTK, replaceability matrix); `moon run dust:gen-check`, `moon run dust:validate-substrate`.

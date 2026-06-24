@@ -17,7 +17,7 @@ note = "Paths are suggested layout hints for Archon routing, not hard requiremen
 
 [cli]
 entry = "dust"
-commands = ["doctor", "list", "env", "bootstrap", "version", "help"]
+commands = ["doctor", "list", "gen", "env", "bootstrap", "version", "help"]
 
 [install]
 strategy = "global"
@@ -26,7 +26,7 @@ shell = "zsh"
 note = "Binaries install globally; only manifest, scripts, configs, and metadata live in-repo."
 
 [modules]
-ids = ["shell", "git", "nav", "system", "session", "secrets", "tools", "dotfiles", "js", "rust", "ether", "logs"]
+ids = ["shell", "git", "nav", "system", "session", "secrets", "tools", "dotfiles", "js", "rust", "ether", "logs", "agent"]
 
 [runtime_manager]
 default = "mise"

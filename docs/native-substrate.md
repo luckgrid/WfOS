@@ -24,13 +24,26 @@ The generated tool registry is written to the [Archon](metadata-plane.md) packag
 
 | Command | Mutating | Agent-safe | Purpose |
 |---------|----------|------------|---------|
-| `dust doctor` | no | yes | detect tools, print readiness, assert secrets rail, write the Archon registry |
+| `dust doctor [--json] [--no-write]` | no | yes | detect tools, print readiness, assert secrets rail, write the Archon registry; `--json` emits the registry object to stdout for one-read agent assessment |
 | `dust list [module]` | no | yes | list modules and tools from the manifest |
-| `dust env` | no | yes | print the shell activation snippet |
+| `dust gen <brewfile\|mise>` | no | yes | derive install artifacts (Brewfile / mise block) from the manifest (dry-run, stdout) |
+| `dust env [--shell\|--json]` | no | yes | print the resolved Dust environment (paths, module map, `DUST_AGENT` state); `--shell` prints the activation snippet, `--json` the structured form |
 | `dust bootstrap [--dry-run]` | yes | no | install missing tools (brew + mise), symlink configs, wire `~/.zshrc` |
 
 Run them directly or through moon: `moon run dust:doctor`, `moon run dust:list`,
-`moon run dust:env`.
+`moon run dust:env`, `moon run dust:gen-check`, `moon run dust:validate-substrate`.
+
+### Manifest-derived install artifacts
+
+The manifest is the single source of truth; install artifacts are **derived**, not hand-kept:
+
+- `dust gen brewfile` emits a Homebrew bundle (every tool with a `brew` formula, grouped by
+  module). It reproduces the committed `config/Brewfile` byte-for-byte; `dust gen brewfile --check`
+  (gate `moon run dust:gen-check`) fails on drift so the Brewfile can never diverge from the manifest.
+  Filters: `--missing` (only not-yet-installed) and `--defaults` (only module-default tools).
+- `dust gen mise` emits a commented mise `[tools]` block for the detect-only runtimes. It stays
+  commented because the manifest names the desired tool *set*, not runtime *versions* — those are
+  pinned by the operator via mise/proto (native version files stay authoritative).
 
 ## Modules
 
@@ -51,9 +64,33 @@ alternatives are detected if present but never forced.
 | `rust` | cargo | rustup, cargo-nextest | Rust build/test routing |
 | `ether` | wasmtime | — | WASM/WASI runtime for portable components |
 | `logs` | files | sqlite3 | session and command traceability |
+| `agent` | rtk | qmd | LLM token-cost enhancements — output compression (RTK) + retrieval (QMD) |
 
 The `dust` disk tool from the Unix-substrate research is intentionally **substituted by `dua`**
 to avoid a CLI name clash with the Dust product binary (`~/.local/bin/dust`).
+
+### Replaceability matrix
+
+Every module is swappable; the matrix is **manifest data, not code** — it is the projection of
+each tool's `default` + `alternatives` fields over the modules. A *swappable role* is a
+module-default tool with a non-empty `alternatives` list (e.g. `nav`: fzf/skim, `session`:
+tmux/zellij, `secrets`: pass/age+sops, `tools`: mise/proto, `git`: git/jj, `js`: pnpm/npm…).
+
+`dust list --matrix` prints the matrix; `dust doctor` (and `doctor --json` under `roles[]`)
+reports the **active** member of each role — the installed default, else the first installed
+alternative, else `none (default missing)`:
+
+```text
+module     default          active         alternatives
+nav        fzf              fzf (default)  skim
+session    tmux             tmux (default) zellij
+secrets    pass             pass (default) age,sops
+tools      mise             mise (default) proto,asdf
+```
+
+Alternative ids that are external runtimes (not themselves Dust tools, e.g. `asdf`, `npm`,
+`yarn`) are reported as informational notes by `validate-substrate.sh`. The runtime controller
+(Kraken) reads this matrix to detect and route through whichever member is active.
 
 The manifest (`manifest/dust.tools.toml`) is the authoritative list, with per-tool `brew`,
 `detect`, `agent_safe`, and `alternatives` fields. `doctor` reads it to produce the registry;
@@ -132,6 +169,28 @@ moon run dust:validate-dotfiles
 
 Promotion to `~/.local/share/chezmoi/` and `chezmoi apply` are human-gated — see the dotfiles
 README for the promotion workflow.
+
+## Output compression (RTK)
+
+[RTK](https://github.com/rtk-ai/rtk) is the **recommended-default** output compressor in the
+`agent` module: it proxies dev commands and rewrites their output to cut LLM token use 60-90% —
+the single highest-impact token lever in the substrate. It is **swappable**, not hard-locked:
+
+- The routing layer lives in `config/shell/rtk.zsh` and is a **no-op** unless RTK is installed
+  **and** `DUST_RTK=1` (the default). Set `DUST_RTK=0` to disable, or override per profile in
+  `dotfiles/.chezmoidata/profiles.toml` (`rtk` flag). The chezmoi fragment
+  `dot_config/zsh/rtk.zsh.tmpl` sets `DUST_RTK` from profile data and sources the same layer;
+  `dust.zsh` stands down when `DUST_RTK_MANAGED=1` to avoid double-sourcing.
+- Routing is conservative: only **read-only / high-output** subcommands are wrapped
+  (`git status|diff|log|show|branch|blame`, `grep`/`rg`). Interactive and mutating commands run
+  raw, and `command <tool>` is always the escape hatch. Full transparent rewriting for agent
+  sessions is handled by the Claude Code hook.
+- Name-collision guard: the layer activates only when `rtk` exposes a `gain` subcommand, so the
+  unrelated `reachingforthejack/rtk` (Rust Type Kit) never gets wired by mistake. Verify with
+  `rtk --version` and `which rtk`.
+
+`rtk gain` reports cumulative savings. **Baseline snapshot (2026-06-24, local-macos-full):**
+196 commands · 186.9K input / 103.2K output tokens · **83.7K tokens saved (44.8%)**.
 
 ## Agent rails
 

@@ -10,10 +10,10 @@ Deep dive: [`../../docs/native-substrate.md`](../../docs/native-substrate.md).
 
 ```txt
 manifest/dust.tools.toml   single source of truth — modules + tools
-bin/                       dust, dust-doctor, dust-bootstrap, dust-env
-lib/                       manifest parser, shared helpers, per-module logic
-config/                    Brewfile + shell fragment + tool config templates
-moon.yml                   doctor/list/env tasks
+bin/                       dust, dust-doctor, dust-bootstrap, dust-env, dust-gen, validate-substrate.sh
+lib/                       manifest parser, generate.sh, shared helpers, per-module logic
+config/                    Brewfile (generated) + shell fragment + tool config templates
+moon.yml                   doctor/list/env/gen-check/validate-substrate tasks
 ```
 
 The generated tool registry is written to the [Archon](../archon/README.md) package
@@ -39,17 +39,25 @@ the resolved package path into `~/.zshrc` automatically. See [`../../docs/setup.
 
 | Command | Mutating | Agent-safe | Purpose |
 |---------|----------|------------|---------|
-| `dust doctor` | no | yes | detect tools, print readiness, write the registry |
+| `dust doctor [--json] [--no-write]` | no | yes | detect tools, print readiness (`--json` = parseable), write the registry |
 | `dust list [module]` | no | yes | list modules and tools from the manifest |
-| `dust env` | no | yes | print the shell activation snippet |
+| `dust gen <brewfile\|mise>` | no | yes | derive install artifacts from the manifest (dry-run, stdout) |
+| `dust env [--shell\|--json]` | no | yes | print the resolved environment (paths, module map, `DUST_AGENT`); `--shell` = activation snippet |
 | `dust bootstrap` | yes | no | install (brew + mise), symlink configs, wire `~/.zshrc` |
+
+The manifest is the single source of truth: `dust gen brewfile` reproduces `config/Brewfile`
+exactly (enforced by `dust gen brewfile --check` / `moon run dust:gen-check`).
 
 ## Modules
 
-`shell, git, nav, session, secrets, tools, js, rust, ether, logs` — each replaceable
-(fzf ↔ skim, tmux ↔ zellij, mise ↔ proto, git ↔ jj). The manifest holds per-tool `brew`,
-`detect`, `agent_safe`, and `alternatives`. Descriptions and links:
+`shell, git, nav, system, session, secrets, tools, dotfiles, js, rust, ether, logs, agent` —
+each replaceable (fzf ↔ skim, tmux ↔ zellij, mise ↔ proto, git ↔ jj). The manifest holds
+per-tool `brew`, `detect`, `agent_safe`, and `alternatives`. Descriptions and links:
 [`../../docs/tool-catalog.md`](../../docs/tool-catalog.md).
+
+The `agent` module wires **RTK** as the recommended-default output compressor (60-90% token
+savings), swappable via `DUST_RTK` / profile data — see
+[`../../docs/native-substrate.md`](../../docs/native-substrate.md#output-compression-rtk).
 
 ## mise / proto coexistence
 

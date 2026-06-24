@@ -19,6 +19,25 @@
         "missing_default": { "type": "integer" }
       }
     },
+    "missing_defaults": {
+      "type": "array",
+      "description": "ids of module-default tools not detected on this host",
+      "items": { "type": "string" }
+    },
+    "roles": {
+      "type": "array",
+      "description": "replaceability matrix: the active member of each swappable role",
+      "items": {
+        "type": "object",
+        "required": ["module", "default", "active", "active_kind"],
+        "properties": {
+          "module": { "type": "string" },
+          "default": { "type": "string" },
+          "active": { "type": "string" },
+          "active_kind": { "type": "string", "enum": ["default", "alternative", "none"] }
+        }
+      }
+    },
     "tools": {
       "type": "array",
       "items": {

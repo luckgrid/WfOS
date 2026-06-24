@@ -446,3 +446,24 @@ detect = "sqlite3"
 agent_safe = true
 alternatives = ""
 purpose = "local structured session/command logs (detect-only)"
+
+# ── agent (LLM token-cost enhancements) ──────────────────────────────────────
+[[tool]]
+module = "agent"
+id = "rtk"
+default = true
+brew = "rtk"
+detect = "rtk"
+agent_safe = true
+alternatives = ""
+purpose = "LLM output compressor — proxies dev commands, cuts tokens 60-90% (recommended-default; swappable via DUST_RTK + profile data)"
+
+[[tool]]
+module = "agent"
+id = "qmd"
+default = false
+brew = ""
+detect = "qmd"
+agent_safe = true
+alternatives = ""
+purpose = "local markdown retrieval index (BM25+vectors) for agents (detect-only; complements RTK, different role)"

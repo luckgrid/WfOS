@@ -33,6 +33,15 @@ fi
 command -v eza >/dev/null 2>&1 && alias ls='eza' && alias ll='eza -l --git' && alias la='eza -la --git'
 command -v bat >/dev/null 2>&1 && alias cat='bat --paging=never'
 
+# RTK output-compression layer (recommended-default; swappable via DUST_RTK).
+# Skipped when the chezmoi layer manages it (DUST_RTK_MANAGED=1) to avoid double-sourcing;
+# the chezmoi fragment sets DUST_RTK from profile data, then sources this same file.
+if [ -z "${DUST_RTK_MANAGED:-}" ]; then
+  _dust_rtk_frag="${DUST_HOME:-$HOME/Workstreams/Build/src/workspaces/wfos/packages/dust}/config/shell/rtk.zsh"
+  [ -f "$_dust_rtk_frag" ] && source "$_dust_rtk_frag"
+  unset _dust_rtk_frag
+fi
+
 # Zsh plugins (Homebrew, sourced files — guarded so missing plugins are harmless).
 # Order matters: autosuggestions/autocomplete first, syntax-highlighting LAST.
 # Skipped when the chezmoi plugin layer manages plugins — it sets DUST_PLUGINS_MANAGED=1

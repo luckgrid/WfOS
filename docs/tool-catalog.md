@@ -3,8 +3,9 @@
 The open-source tools, libraries, skills, and crates that WfOS builds on or plans to include,
 grouped by role. Each entry notes its status and where it fits.
 
-Status legend: **core** (installed by Dust today) · **optional** (detected/swappable) ·
-**planned** (intended, not yet wired) · **inspiration** (reference, not a dependency).
+Status legend: **core** (installed by Dust today) · **recommended-default** (a Dust default,
+still swappable) · **optional** (detected/swappable) · **planned** (intended, not yet wired) ·
+**inspiration** (reference, not a dependency).
 
 ---
 
@@ -38,6 +39,7 @@ detected if present. See [native-substrate.md](native-substrate.md).
 | [age](https://github.com/FiloSottile/age) / [sops](https://github.com/getsops/sops) | optional | file/secret encryption (config files: sops+age; interactive: pass) | BSD-3 / MPL-2.0 |
 | [gitleaks](https://github.com/gitleaks/gitleaks) | optional | scan staged/committed files for leaked secrets (pre-commit gate candidate) | MIT |
 | [chezmoi](https://www.chezmoi.io/) | optional | cross-machine dotfile manager (complements Dust's symlink bootstrap) | MIT |
+| [RTK (Rust Token Killer)](https://github.com/rtk-ai/rtk) | recommended-default | LLM output compressor — proxies dev commands, cuts tokens 60-90% (Dust `agent` module; swappable via `DUST_RTK`) | Apache-2.0 |
 | [choose](https://github.com/theryangeary/choose) | optional | field selector — human-friendly `cut`/`awk` alternative | MIT |
 | [zsh-autocomplete](https://github.com/marlonrichert/zsh-autocomplete) | optional | real-time menu completion (sourced plugin; can conflict) | MIT |
 | [jj](https://github.com/jj-vcs/jj) | optional | Git-compatible VCS alternative | MIT/Apache-2.0 |
@@ -96,7 +98,7 @@ required for WfOS to be useful.
 
 | Tool | Status | What it does |
 |------|--------|--------------|
-| [RTK (Rust Token Killer)](https://github.com/rtk-ai/rtk) | optional | CLI proxy that compresses command output to cut LLM token use 60–90%; single Rust binary |
+| [RTK (Rust Token Killer)](https://github.com/rtk-ai/rtk) | recommended-default | CLI proxy that compresses command output to cut LLM token use 60–90%; single Rust binary. Now a Dust `agent`-module default (see the Unix-substrate table above); swappable via `DUST_RTK`. |
 | [QMD](https://github.com/tobi/qmd) | optional | Local hybrid search (BM25 + vectors + rerank) over markdown collections; CLI/MCP `query` → `get` retrieval for agents without loading full vaults |
 | [ponytail](https://github.com/DietrichGebert/ponytail) | optional | forces the simplest, most minimal solution that works (anti-over-engineering) |
 | [drawio-skill](https://github.com/Agents365-ai/drawio-skill) | optional | generate diagrams/flowcharts as draw.io files and export images |

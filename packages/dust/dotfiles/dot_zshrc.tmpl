@@ -17,6 +17,9 @@ fi
 
 # Profile-aware zsh plugin stack (guarded; missing plugin is harmless). See dot_config/zsh/.
 [ -f "$HOME/.config/zsh/plugins.zsh" ] && source "$HOME/.config/zsh/plugins.zsh"
+
+# RTK output-compression layer (recommended-default; profile sets DUST_RTK). See dot_config/zsh/.
+[ -f "$HOME/.config/zsh/rtk.zsh" ] && source "$HOME/.config/zsh/rtk.zsh"
 {{ if not $p.secrets }}
 # profile declares secrets = false: no secret-backed env, no secret reads.
 export WFOS_NO_SECRETS=1

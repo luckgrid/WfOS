@@ -162,7 +162,7 @@ if command -v chezmoi >/dev/null 2>&1; then
   tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
   rendered=0
   for prof in local-macos-full headless-dev agent-safe workstreams-maintainer; do
-    for t in dot_zshrc.tmpl dot_gitconfig.tmpl dot_config/zsh/plugins.zsh.tmpl; do
+    for t in dot_zshrc.tmpl dot_gitconfig.tmpl dot_config/zsh/plugins.zsh.tmpl dot_config/zsh/rtk.zsh.tmpl; do
       if chezmoi execute-template --source "$SRC" \
         --override-data "{\"profile\":\"$prof\",\"git\":{\"name\":\"\",\"email\":\"\"}}" \
         < "$SRC/$t" > "$tmp/out" 2>"$tmp/err"; then

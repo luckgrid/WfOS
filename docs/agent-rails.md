@@ -13,7 +13,7 @@ read-only commands run; mutating ones exit with a non-zero status. The rules liv
 ```toml
 [agent]
 env_flag = "DUST_AGENT"
-allow = ["doctor", "list", "env", "version", "help"]
+allow = ["doctor", "list", "gen", "env", "version", "help"]
 block = ["bootstrap"]
 
 [gates]
@@ -25,8 +25,9 @@ no_shell_mutation = true   # no edits to ~/.zshrc or ~/.config symlinks
 block_tools = ["pass", "age", "sops"]   # the no_secret_read hard block
 ```
 
-So an agent can run `dust doctor`, `dust list`, and `dust env` to understand the machine, but
-cannot `bootstrap`, install tools, read secrets, or change dotfiles.
+So an agent can run `dust doctor`, `dust list`, `dust gen` (dry-run derivation from the
+manifest), and `dust env` to understand the machine, but cannot `bootstrap`, install tools,
+read secrets, or change dotfiles.
 
 ## The secret-read hard block
 

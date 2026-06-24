@@ -48,3 +48,35 @@ dust_manifest_version() {
 dust_manifest_modules() {
   dust_manifest_tsv | awk -F'\037' '!seen[$1]++ { print $1 }'
 }
+
+# detect token for a tool id (manifest field 5), or empty if the id is not a manifest tool.
+dust_detect_of() {
+  dust_manifest_tsv | awk -F'\037' -v id="$1" '$2==id {print $5; exit}'
+}
+
+# Replaceability matrix: one record per swappable role (a module-default tool with a non-empty
+# `alternatives` list). Resolves the ACTIVE member = installed default, else first installed
+# alternative, else the (missing) default. Requires dust_detect (common.sh, sourced first).
+# Emits US-delimited:  module \037 default_id \037 alternatives \037 active_id \037 active_kind
+# active_kind ∈ {default, alternative, none}.
+dust_role_matrix() {
+  # shellcheck disable=SC2034  # fields bound positionally; not all used here
+  while IFS=$'\037' read -r module id def brew detect agent_safe alts purpose; do
+    [ -n "$id" ] || continue
+    [ "$def" = "true" ] || continue
+    [ -n "$alts" ] || continue
+    local active="" kind="none" a adet
+    if dust_detect "$detect"; then
+      active="$id"; kind="default"
+    else
+      IFS=',' read -r -a _arr <<< "$alts"
+      for a in "${_arr[@]}"; do
+        [ -n "$a" ] || continue
+        adet="$(dust_detect_of "$a")"
+        if [ -n "$adet" ] && dust_detect "$adet"; then active="$a"; kind="alternative"; break; fi
+      done
+    fi
+    [ -n "$active" ] || active="$id"
+    printf '%s\037%s\037%s\037%s\037%s\n' "$module" "$id" "$alts" "$active" "$kind"
+  done < <(dust_manifest_tsv)
+}

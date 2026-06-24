@@ -7,7 +7,8 @@ Read-only by default. [`README.md`](README.md) and
 
 `dust` reads `DUST_AGENT`. With `DUST_AGENT=1`:
 
-- **Allowed:** `doctor`, `list`, `env`, `version`, `help`.
+- **Allowed:** `doctor` (incl. `--json`), `list`, `gen` (dry-run artifact derivation),
+  `env` (incl. `--json`/`--shell`), `version`, `help`.
 - **Blocked:** `bootstrap` (and all installs, secret reads, dotfile edits) — exits non-zero.
 
 The policy is `../archon/policies/dust.agent.policy.toml`; gates: `no_global_install`,
