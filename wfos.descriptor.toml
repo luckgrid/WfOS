@@ -1,0 +1,32 @@
+# Archon descriptor — WfOS Level 0 workspace (colocated beside the unit).
+# One read here replaces scanning packages/, apps/, moon.yml, and the READMEs to
+# infer what this workspace is, how to drive it, and the rails it runs under.
+id = "wfos"
+kind = "workspace"
+title = "WfOS Level 0 Workspace"
+status = "active"
+version = "0.1.0"
+summary = "Local-first Workflows Operating System workspace — native substrate + metadata plane."
+
+system_space = "luckgrid"
+domain = "luckgrid"
+layer = "application"
+system = "wfos"
+
+[paths]
+root = "Build/src/workspaces/wfos"
+
+[native]
+manifests = [".prototools", "moon.yml"]
+
+[entrypoints]
+setup = "moon run wfos:setup"
+doctor = "moon run wfos:doctor"
+
+[capabilities]
+provides = ["substrate.tools", "metadata.registry", "agent.rails"]
+requires = ["filesystem.read", "proto", "moon"]
+
+[policy]
+allow_git_push = false
+allow_secret_read = false

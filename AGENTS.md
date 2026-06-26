@@ -19,8 +19,9 @@ the source of truth for detailed commands and architecture.
 |---------------------|----------------------|
 | `dust doctor`, `dust list`, `dust gen`, `dust env` | `dust bootstrap`, brew/mise installs |
 | `moon run dust:doctor`, `moon run dust:gen-check`, `moon run dust:validate-substrate`, `moon query …` | reading secrets (`pass`/`age`/`sops`) |
-| read descriptors, schemas, policies, registry | editing `~/.zshrc` or `~/.config` symlinks |
-| read/edit files in this repo | starting servers / `zola serve` / long-running dev tasks |
+| `moon run archon:validate`, `moon run archon:sync` (generate/validate the registry) | editing `~/.zshrc` or `~/.config` symlinks |
+| read descriptors, schemas, policies, registry | starting servers / `zola serve` / long-running dev tasks |
+| read/edit files in this repo | (other mutations require a human) |
 
 Gates and the policy that enforces them live at
 `packages/archon/policies/dust.agent.policy.toml`.

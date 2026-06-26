@@ -1,9 +1,23 @@
 layer: configuration
-language: unknown
+language: bash
 
 project:
   name: "archon"
   description: "Metadata plane — descriptors, schemas, policies, and the generated registry."
 
-# No tasks yet: Archon is read by Dust (doctor writes the registry) and, later, by
-# Kraken/Hypercube. It joins the graph so dependents can declare edges to it.
+# Build-time metadata tasks. Archon still exposes no end-user runtime CLI; `validate` is
+# the registry gate and `sync` regenerates the registry from descriptors + policies + the
+# Dust tools registry. Both are read-only over sources (agent-safe) and uncached (they read
+# host-specific inputs and emit generated output).
+tasks:
+  validate:
+    command: "bin/archon"
+    args: ["validate"]
+    options:
+      cache: false
+
+  sync:
+    command: "bin/archon"
+    args: ["sync"]
+    options:
+      cache: false

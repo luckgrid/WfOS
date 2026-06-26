@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+# archon validate — GATE. Validate descriptors, policies, and the generated graph
+# against their JSON schemas. Read-only and agent-safe. The schema is the source of truth:
+# required keys and enums are read from the schema, not hardcoded here.
+set -uo pipefail
+
+_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=../lib/common.sh
+source "$_self/../lib/common.sh"
+# shellcheck source=../lib/descriptor.sh
+source "$_self/../lib/descriptor.sh"
+
+archon_require_jq
+
+fail=0
+
+# Check a present field's value against its schema enum (no-op if field absent).
+_check_enum() {
+  local full="$1" field="$2" schema="$3" label="$4" val
+  val="$(jq -r --arg k "$field" '.[$k] // empty' <<<"$full")"
+  [ -n "$val" ] || return 0
+  if jq -e --arg k "$field" 'has("properties") and (.properties[$k].enum != null)' "$schema" >/dev/null; then
+    if ! jq -e --arg k "$field" --arg v "$val" '.properties[$k].enum | index($v)' "$schema" >/dev/null; then
+      archon_err "$label: $field='$val' is not in the schema enum"
+      return 1
+    fi
+  fi
+  return 0
+}
+
+_validate_descriptors() {
+  local schema="$ARCHON_SCHEMAS/unit.schema.json"
+  [ -f "$schema" ] || archon_die "missing schema: $schema"
+  local required count=0
+  required="$(jq -r '.required[]' "$schema")"
+
+  archon_info "descriptors (vs schemas/unit.schema.json)"
+  local f src full id req
+  while IFS=$'\037' read -r f src; do
+    [ -n "$f" ] || continue
+    count=$((count + 1))
+    full="$(archon_descriptor_json "$f")"
+    id="$(jq -r '.id // "?"' <<<"$full")"
+    local label="$id [$src]"
+    local unit_fail=0
+
+    for req in $required; do
+      jq -e --arg k "$req" 'has($k)' <<<"$full" >/dev/null \
+        || { archon_err "$label: missing required '$req'"; unit_fail=1; }
+    done
+    jq -e '.paths.root // empty | length > 0' <<<"$full" >/dev/null \
+      || { archon_err "$label: paths.root is required and must be non-empty"; unit_fail=1; }
+
+    _check_enum "$full" kind "$schema" "$label" || unit_fail=1
+    _check_enum "$full" status "$schema" "$label" || unit_fail=1
+    _check_enum "$full" layer "$schema" "$label" || unit_fail=1
+
+    if [ "$unit_fail" -eq 0 ]; then
+      printf '  %sok%s  %-12s %s%s%s\n' "$_C_GREEN" "$_C_RESET" "$id" "$_C_DIM" "$f" "$_C_RESET"
+    else
+      fail=1
+    fi
+  done < <(archon_find_descriptors)
+
+  [ "$count" -gt 0 ] || { archon_err "no descriptors found"; fail=1; }
+  archon_info "validated $count descriptor(s)"
+}
+
+_validate_policies() {
+  local schema="$ARCHON_SCHEMAS/policy.schema.json"
+  [ -f "$schema" ] || archon_die "missing schema: $schema"
+  local required count=0
+  required="$(jq -r '.required[]' "$schema")"
+
+  archon_info "policies (vs schemas/policy.schema.json)"
+  local f full id req pol_fail
+  for f in "$ARCHON_POLICIES"/*.toml; do
+    [ -e "$f" ] || continue
+    count=$((count + 1))
+    full="$(archon_descriptor_json "$f")"
+    id="$(jq -r '.id // "?"' <<<"$full")"
+    pol_fail=0
+
+    for req in $required; do
+      jq -e --arg k "$req" 'has($k)' <<<"$full" >/dev/null \
+        || { archon_err "policy $id: missing required '$req'"; pol_fail=1; }
+    done
+
+    # id must match the schema pattern (^[a-z0-9][a-z0-9._-]*$)
+    if ! jq -e '.id | test("^[a-z0-9][a-z0-9._-]*$")' <<<"$full" >/dev/null 2>&1; then
+      archon_err "policy $id: id does not match schema pattern"
+      pol_fail=1
+    fi
+
+    if [ "$pol_fail" -eq 0 ]; then
+      printf '  %sok%s  %-20s %s%s%s\n' "$_C_GREEN" "$_C_RESET" "$id" "$_C_DIM" "$f" "$_C_RESET"
+    else
+      fail=1
+    fi
+  done
+
+  [ "$count" -gt 0 ] || { archon_warn "no policies found"; }
+  [ "$count" -gt 0 ] && archon_info "validated $count policy/policies"
+}
+
+_validate_graph() {
+  local schema="$ARCHON_GRAPHS/edges.schema.json"
+  local graph="$ARCHON_REGISTRY/graph.json"
+
+  [ -f "$schema" ] || archon_die "missing schema: $schema"
+  [ -f "$graph" ]  || { archon_warn "graph.json absent — run 'moon run archon:sync' first"; return 0; }
+
+  archon_info "graph (vs graphs/edges.schema.json)"
+  local gfail=0
+
+  # required top-level keys
+  jq -e 'has("nodes") and has("edges")' "$graph" >/dev/null \
+    || { archon_err "graph: missing required 'nodes' or 'edges'"; gfail=1; }
+
+  # node kind enum
+  local node_kinds
+  node_kinds="$(jq -r '.properties.nodes.items.properties.kind.enum[]' "$schema")"
+  for k in $(jq -r '.nodes[].kind' "$graph" | sort -u); do
+    echo "$node_kinds" | grep -qx "$k" \
+      || { archon_err "graph: node kind '$k' not in schema enum"; gfail=1; }
+  done
+
+  # edge rel enum
+  local edge_rels
+  edge_rels="$(jq -r '.properties.edges.items.properties.rel.enum[]' "$schema")"
+  for r in $(jq -r '.edges[].rel' "$graph" | sort -u); do
+    echo "$edge_rels" | grep -qx "$r" \
+      || { archon_err "graph: edge rel '$r' not in schema enum"; gfail=1; }
+  done
+
+  # each edge endpoint must reference an existing node
+  local dangling
+  dangling="$(jq -r '
+    [.nodes[].id] as $ids |
+    (.edges | map(.from) + map(.to)) |
+    map(select(. as $e | $ids | index($e) | not)) | unique | .[]
+  ' "$graph" 2>/dev/null)"
+  if [ -n "$dangling" ]; then
+    archon_err "graph: dangling edge endpoints: $dangling"
+    gfail=1
+  fi
+
+  local nn en
+  nn=$(jq -r '.nodes | length' "$graph")
+  en=$(jq -r '.edges | length' "$graph")
+
+  if [ "$gfail" -eq 0 ]; then
+    printf '  %sok%s  graph.json (%s nodes, %s edges) — all endpoints resolve\n' \
+      "$_C_GREEN" "$_C_RESET" "$nn" "$en"
+  else
+    fail=1
+  fi
+}
+
+main() {
+  _validate_descriptors
+  _validate_policies
+  _validate_graph
+  if [ "$fail" -eq 0 ]; then
+    archon_ok "archon validate: PASS"
+  else
+    archon_err "archon validate: FAIL"
+  fi
+  exit "$fail"
+}
+
+main "$@"

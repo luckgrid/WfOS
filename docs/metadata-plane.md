@@ -1,8 +1,10 @@
 # Metadata plane — Archon
 
 Archon stores the machine-readable meaning of the system: **descriptors, registry, schemas,
-policies, graphs, models, and package contracts**. It has no CLI of its own — it is data and
-contracts that the other products read and write.
+policies, graphs, models, and package contracts**. It exposes no end-user runtime CLI — it is
+data and contracts that the other products read and write, plus two build-time metadata tasks
+(`moon run archon:validate`, `moon run archon:sync`) that validate those contracts and generate
+the registry from them.
 
 Archon is delivered as a package (`packages/archon/`). It is the shared substrate the
 [interface layers](architecture.md#interface-layers) sit on: profiles and policies decide how
@@ -15,7 +17,7 @@ Descriptors   describe how things connect (paths, CLI, modules, runtime manager)
 Registries    index what exists (tools, workspaces, apps, patterns, and their kinds)
 Schemas       define contracts for generated data
 Policies      define rules — including agent rails and gates
-Graphs        define relationships — project deps + git resources (planned)
+Graphs        define relationships — capability, policy, and unit dependency edges (generated)
 Models        define machine-readable domain meaning (planned)
 Packages      define Hypercube-managed deliverable interfaces (planned)
 ```
@@ -24,14 +26,43 @@ Packages      define Hypercube-managed deliverable interfaces (planned)
 
 | Path | Kind | Purpose |
 |------|------|---------|
-| `descriptors/dust.descriptor.toml` | descriptor | how Dust connects — paths, CLI, modules, runtime manager |
+| `descriptors/*.descriptor.toml` | descriptor | central unit descriptors (`dust`, planned `ds`); colocated descriptors live beside their units (e.g. `wfos.descriptor.toml`) |
+| `schemas/unit.schema.json` | schema | contract for unit descriptors (id, kind, paths, capabilities, policy) |
+| `schemas/policy.schema.json` | schema | contract for policies (agent-rails + command styles) |
 | `schemas/dust.tools.schema.json` | schema | contract for the generated tools registry |
 | `policies/dust.agent.policy.toml` | policy | Dust agent rails (allow/block, gates) |
-| `registry/tools.json` | registry | tool inventory produced by `dust doctor` (gitignored — host-specific) |
-| `registry/.gitkeep` | — | keeps the registry directory tracked |
+| `policies/no-agent-git-push.policy.toml` | policy | agents never push or publish (human-only) |
+| `graphs/edges.schema.json` | schema | contract for the project graph (nodes + directed edges) |
+| `registry/{units,skills,profiles,policies,tools}.json` | registry | generated indexes (gitignored — host-specific) |
+| `registry/graph.{json,dot}` | registry | generated project graph (gitignored — host-specific) |
+| `registry/QUERIES.md`, `registry/queries/*.jq` | query | jq cookbook over the registry |
+| `registry/sessions/*.json` | record | build-session records (tracked for provenance) |
 
-Today Archon + Dust are the implemented pair: Dust produces the registry and is governed by
-the agent policy here.
+Dust produces `tools.json` (`dust doctor`) and is governed by the agent policy here; `archon
+sync` reads it and the descriptors/policies to emit the rest of the registry.
+
+## Generation and queries
+
+`archon sync` walks descriptors (colocated beside units first; `descriptors/` is a central
+override) and policies, and emits the registry as compact JSON. It also derives the project
+graph (`graph.json` + `graph.dot`) from unit `capabilities` and policy `applies_to` edges.
+`archon validate` is the gate: it checks every descriptor, policy, and the graph against its
+schema, reading the required keys and enums from the schema itself so the schema stays the
+single source of truth. Both run on bash + `awk` + `jq` (no new dependencies) and are agent-safe.
+
+The registry is a **pre-computed context cache**. One filtered query answers what a repo scan
+otherwise would:
+
+```bash
+jq -r --arg kind workspace -f registry/queries/by-kind.jq registry/units.json | jq -r .id
+jq -r --arg cap proto       -f registry/queries/requires.jq registry/units.json
+```
+
+To learn what a workspace is, how to drive it, and the rails it runs under, an agent reads one
+descriptor (or one filtered query) instead of scanning `moon.yml`, every package manifest, and
+the READMEs to infer the same facts. Because the registry is generated and compact, it stays
+cheaper to read than the source it summarizes. See
+[`../packages/archon/registry/QUERIES.md`](../packages/archon/registry/QUERIES.md).
 
 ## Interface-layer exposure
 

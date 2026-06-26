@@ -29,6 +29,19 @@ So an agent can run `dust doctor`, `dust list`, `dust gen` (dry-run derivation f
 manifest), and `dust env` to understand the machine, but cannot `bootstrap`, install tools,
 read secrets, or change dotfiles.
 
+## Publish rails (policy metadata)
+
+Archon also records a **no-agent-git-push** policy at
+`packages/archon/policies/no-agent-git-push.policy.toml`. It states that agents may inspect and
+stage changes (`git status`, `git diff`, `git add`, `git commit`) but must not publish to a
+remote (`git push`, `gh release create`, `gh pr merge`). The policy appears in the generated
+project graph (`agent → blocked-by → policy:no-agent-git-push`) and in agent guides.
+
+At Level 0 this is **policy metadata**, not runtime enforcement in Dust: an agent can still invoke
+`git push` or `gh` directly on `PATH` unless a future Kraken command router blocks it — the same
+boundary as secret tools above. Treat the policy as authoritative intent for agent behavior; OS-level
+interception is deferred to Kraken.
+
 ## The secret-read hard block
 
 The `no_secret_read` gate is enforced, not advisory. Any code path that would invoke a

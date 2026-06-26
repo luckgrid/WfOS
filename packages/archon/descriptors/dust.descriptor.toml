@@ -1,13 +1,21 @@
 # Archon descriptor — Dust native substrate (WfOS Level 0).
 id = "dust"
 kind = "native-substrate"
+title = "Dust — Native Substrate"
+status = "active"
 archetype = "native-substrate"
 brand = "dust"
 version = "0.1.0"
 summary = "Global low-level Unix/Rust tool substrate for devs and agents."
 
+system_space = "luckgrid"
+domain = "luckgrid"
+layer = "native-substrate"
+system = "wfos"
+
 [paths]
 # Relative to ~/Workstreams/ by convention — adjust if your tree differs.
+root = "Build/src/workspaces/wfos/packages/dust"
 package = "Build/src/workspaces/wfos/packages/dust"
 manifest = "Build/src/workspaces/wfos/packages/dust/manifest/dust.tools.toml"
 registry = "Build/src/workspaces/wfos/packages/archon/registry/tools.json"
