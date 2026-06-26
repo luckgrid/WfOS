@@ -29,6 +29,7 @@ Packages      define Hypercube-managed deliverable interfaces (planned)
 | `descriptors/*.descriptor.toml` | descriptor | central unit descriptors (`dust`, planned `ds`); colocated descriptors live beside their units (e.g. `wfos.descriptor.toml`) |
 | `schemas/unit.schema.json` | schema | contract for unit descriptors (id, kind, paths, capabilities, policy) |
 | `schemas/policy.schema.json` | schema | contract for policies (agent-rails + command styles) |
+| `schemas/profile.schema.json` | schema | contract for agent operating profiles (scope, commands, validators; authored under `Workstreams/.agents/profiles/`) |
 | `schemas/dust.tools.schema.json` | schema | contract for the generated tools registry |
 | `policies/dust.agent.policy.toml` | policy | Dust agent rails (allow/block, gates) |
 | `policies/no-agent-git-push.policy.toml` | policy | agents never push or publish (human-only) |
@@ -44,11 +45,14 @@ sync` reads it and the descriptors/policies to emit the rest of the registry.
 ## Generation and queries
 
 `archon sync` walks descriptors (colocated beside units first; `descriptors/` is a central
-override) and policies, and emits the registry as compact JSON. It also derives the project
-graph (`graph.json` + `graph.dot`) from unit `capabilities` and policy `applies_to` edges.
-`archon validate` is the gate: it checks every descriptor, policy, and the graph against its
-schema, reading the required keys and enums from the schema itself so the schema stays the
-single source of truth. Both run on bash + `awk` + `jq` (no new dependencies) and are agent-safe.
+override), policies, and **agent operating profiles** (`Workstreams/.agents/profiles/*.toml`),
+and emits the registry as compact JSON. It also derives the project graph (`graph.json` +
+`graph.dot`) from unit `capabilities`, policy `applies_to` edges, and profile `selects` edges.
+`archon validate` is the gate: it checks every descriptor, policy, **agent operating profile**
+(`Workstreams/.agents/profiles/*.toml` vs `schemas/profile.schema.json`, including the
+SkillSpector gate), and the graph against its schema, reading the required keys and enums from
+the schema itself so the schema stays the single source of truth. Both run on bash + `awk` + `jq`
+(no new dependencies) and are agent-safe.
 
 The registry is a **pre-computed context cache**. One filtered query answers what a repo scan
 otherwise would:
@@ -95,8 +99,9 @@ can appear on disk only when filesystem expression is actually needed.
 
 Each product contributes its own descriptor, schema(s), and policy following the Dust
 example: a descriptor for how it connects, a schema for any generated artifact, and a policy
-for its agent rails. Generated, host-specific output goes under `registry/` and is gitignored;
-contracts and policies are tracked.
+for its agent rails. Agent operating profiles are authored under `Workstreams/.agents/profiles/`
+and validated/indexed by Archon (see [agent-configs.md](agent-configs.md)). Generated,
+host-specific output goes under `registry/` and is gitignored; contracts and policies are tracked.
 
 See [native-substrate.md](native-substrate.md) for the producer side and [agent-rails.md](agent-rails.md) for how
 policies are enforced.

@@ -3,6 +3,11 @@
 Archon is data and contracts. [`README.md`](README.md) and
 [`../../docs/metadata-plane.md`](../../docs/metadata-plane.md) are the source of truth.
 
+**Profiles:** agent operating profiles are authored under
+[`Workstreams/.agents/profiles/`](../../../../../.agents/profiles/README.md) (tracked TOML);
+`archon validate` checks them against `schemas/profile.schema.json` and `archon sync` flattens
+them into `registry/profiles.json`. See [agent-configs.md](../../docs/agent-configs.md).
+
 ## Rules
 
 - **Reading is safe.** Descriptors, schemas, and policies are meant to be read by agents to

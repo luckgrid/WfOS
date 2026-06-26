@@ -103,6 +103,33 @@ _validate_policies() {
   [ "$count" -gt 0 ] && archon_info "validated $count policy/policies"
 }
 
+# SkillSpector gate pairing: loads_external=true requires skillspector_scan in required_validators.
+# Args: <profile-json>
+_profile_skillspector_gate_ok() {
+  jq -e '
+    (.skills.loads_external // false) != true
+    or ((.validators.required_validators // []) | index("skillspector_scan"))
+  ' <<<"$1" >/dev/null
+}
+
+_selfcheck_skillspector_gate() {
+  archon_info "skillspector gate (selfcheck)"
+  local bad='{"id":"_gate_negative","skills":{"loads_external":true},"validators":{"required_validators":["frontmatter"]}}'
+  local good='{"id":"_gate_positive","skills":{"loads_external":true},"validators":{"required_validators":["skillspector_scan"]}}'
+  if _profile_skillspector_gate_ok "$bad"; then
+    archon_err "skillspector selfcheck: negative fixture should fail the gate"
+    fail=1
+  else
+    printf '  %sok%s  negative fixture rejected\n' "$_C_GREEN" "$_C_RESET"
+  fi
+  if _profile_skillspector_gate_ok "$good"; then
+    printf '  %sok%s  positive fixture accepted\n' "$_C_GREEN" "$_C_RESET"
+  else
+    archon_err "skillspector selfcheck: positive fixture should pass the gate"
+    fail=1
+  fi
+}
+
 _validate_profiles() {
   local schema="$ARCHON_SCHEMAS/profile.schema.json"
   [ -f "$schema" ] || archon_die "missing schema: $schema"
@@ -153,9 +180,9 @@ _validate_profiles() {
 
     # SkillSpector gate (E05.S4): any profile that loads external skills MUST require a
     # skillspector_scan. An unscanned skill is an unreviewed dependency and does not load.
-    if [ "$(jq -r '.skills.loads_external // false' <<<"$full")" = "true" ]; then
-      jq -e '(.validators.required_validators // []) | index("skillspector_scan")' <<<"$full" >/dev/null \
-        || { archon_err "profile $id: loads_external skills but required_validators is missing 'skillspector_scan' (SkillSpector gate)"; pr_fail=1; }
+    if ! _profile_skillspector_gate_ok "$full"; then
+      archon_err "profile $id: loads_external skills but required_validators is missing 'skillspector_scan' (SkillSpector gate)"
+      pr_fail=1
     fi
 
     if [ "$pr_fail" -eq 0 ]; then
@@ -227,6 +254,7 @@ main() {
   _validate_descriptors
   _validate_policies
   _validate_profiles
+  _selfcheck_skillspector_gate
   _validate_graph
   if [ "$fail" -eq 0 ]; then
     archon_ok "archon validate: PASS"

@@ -46,6 +46,43 @@ The wiring from each app to the profile data is recorded in the routing contract
 ([`packages/dust/dotfiles/.chezmoidata/routing.toml`](../packages/dust/dotfiles/.chezmoidata/routing.toml)):
 for every app, `consumes_profile_data = true` and `holds_secrets = false`.
 
+Chezmoi app templates that exist today: Claude Code (`dot_claude/settings.json.tmpl`) and Zed
+(`dot_config/zed/settings.json.tmpl`). Others are declared in the routing contract and land as
+templates are added.
+
+## Two profile layers (machine vs agent)
+
+WfOS carries **two** profile concepts. They answer different questions and must not be conflated:
+
+| Layer | Home | Question it answers | Consumed by |
+|-------|------|-------------------|-------------|
+| **Agent operating profile** | `Workstreams/.agents/profiles/*.toml` | What may this agent session touch? (scope, commands, rails, validators, compressor intent) | Agents, Archon (`archon validate` / `archon sync` → `profiles.json`), app renderers that read registry data |
+| **Machine / chezmoi profile** | `packages/dust/dotfiles/.chezmoidata/profiles.toml` | What config targets render on this host? (GUI, secrets, `rtk` shell hook) | chezmoi at render time (`local-macos-full`, `agent-safe`, …) |
+
+```mermaid
+flowchart TD
+  AgentProf["Agent profile\n.agents/profiles/*.toml"]
+  MachineProf["Machine profile\n.chezmoidata/profiles.toml"]
+  Registry["registry/profiles.json"]
+  Chezmoi["chezmoi templates\nper-app syntax"]
+  AgentProf --> Registry
+  AgentProf -. compressor intent .-> Registry
+  MachineProf --> Chezmoi
+  Registry -. read by apps/agents .-> Chezmoi
+```
+
+**RTK wiring today:** the agent profile `[output] compressor` field records compressor intent in
+the registry (`output_compressor` in `profiles.json`). The Claude Code hook and the shell RTK
+layer (`config/shell/rtk.zsh`) gate on the **machine** profile `rtk` flag in
+`.chezmoidata/profiles.toml` (from the native-substrate module). Until chezmoi bridges registry
+data at render time, keep them aligned manually: set machine `rtk = true` when the active agent
+profile declares `compressor = "rtk"`; set machine `rtk = false` to opt out on disk regardless of
+registry intent. Skill-loading dev profiles (`workspace-dev`, `agent-safe-maintenance`) declare
+`compressor = "rtk"`; `docs-only` omits it.
+
+See [`packages/dust/dotfiles/ROUTING.md`](../packages/dust/dotfiles/ROUTING.md) for how app
+templates consume machine profile data without becoming a policy source of truth.
+
 ## The lean `AGENTS.md` pattern
 
 `AGENTS.md` is a **pointer, not a manual**. It carries only:

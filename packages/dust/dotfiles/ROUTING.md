@@ -51,13 +51,28 @@ flowchart TD
 4. **App configs consume shared profile data.** Each app config is rendered by chezmoi from the same
    `.chezmoidata` profile data, so the `agent-safe`/`headless-dev` profiles narrow every app at once.
 
+## Two profile layers
+
+Chezmoi templates read **machine profiles** (`.chezmoidata/profiles.toml`: `gui`, `secrets`,
+`rtk`, render categories). Agent **operating profiles** (`Workstreams/.agents/profiles/*.toml`:
+scope, commands, rails, validators, `output.compressor`) are validated by Archon and indexed into
+`registry/profiles.json`. App templates today gate on machine profile flags; registry compressor
+intent is the agent-layer declaration. Keep machine `rtk` aligned with the active agent profile's
+`output.compressor` until render-time bridging lands. See
+[agent-configs](../../../docs/agent-configs.md#two-profile-layers-machine-vs-agent).
+
 ## Pattern (per-app templates)
 
 Per-app config templates are owned by the metadata plane / agent-config layer. Each consumes
-shared profile data instead of forking policy. The first landed instance is the **Claude Code RTK
-hook**, [`dot_claude/settings.json.tmpl`](dot_claude/settings.json.tmpl) (+ `dot_claude/RTK-HOOK.md.tmpl`):
-it renders the transparent command-rewrite hook only when the active profile enables `rtk`, so a
-profile opts out with a single flag. The pattern, for any app:
+shared profile data instead of forking policy. Landed instances:
+
+| App | Template | Gates on |
+|-----|----------|----------|
+| Claude Code | [`dot_claude/settings.json.tmpl`](dot_claude/settings.json.tmpl) (+ [`RTK-HOOK.md.tmpl`](dot_claude/RTK-HOOK.md.tmpl)) | machine profile `rtk` |
+| Zed | [`dot_config/zed/settings.json.tmpl`](dot_config/zed/settings.json.tmpl) | machine profile `gui` |
+
+The Claude hook renders the transparent command-rewrite hook only when machine `rtk` is true (one-flag
+opt-out). The pattern, for any app:
 
 ```gotmpl
 {{/* dot_config/zed/settings.json.tmpl — consumes shared profile data, holds no policy */}}
